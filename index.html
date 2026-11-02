@@ -41,16 +41,23 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 <div class="card"><h3>Kabuuan</h3><div class="tot"><div><small>Linggong ito</small><div class="e" id="we"></div><div class="l" id="wl"></div></div><div><small>Buwang ito</small><div class="e" id="me"></div><div class="l" id="ml"></div></div></div></div>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">Listahan</h3><button class="btn g" id="csv" style="margin:0">⬇ CSV</button></div><div id="list"></div></div>
 <div class="card"><details id="set"><summary>⚙️ Settings: bayad kada oras (€)</summary><div class="rates">
-<div><label>Normal (Lun–Biy)</label><input data-r="normal" type="number" step="0.01" inputmode="decimal"></div>
-<div><label>OT (Lun–Biy)</label><input data-r="ot" type="number" step="0.01" inputmode="decimal"></div>
-<div><label>OT Sabado</label><input data-r="otSab" type="number" step="0.01" inputmode="decimal" placeholder="= OT"></div>
-<div><label>OT Linggo</label><input data-r="otDom" type="number" step="0.01" inputmode="decimal" placeholder="= OT"></div>
-</div><small style="color:#64748b">Sabado at Linggo ay OT lang. Kung blangko ang OT Sabado/Linggo, gagamitin ang OT rate.</small></details></div>
+<div><label>Normal (Lun–Biy)</label><input data-r="normal" type="number" step="0.0001" inputmode="decimal"></div>
+<div><label>OT Lun–Biy (+30%)</label><input data-r="ot" type="number" step="0.0001" inputmode="decimal"></div>
+<div><label>OT Sabado (+50%)</label><input data-r="otSab" type="number" step="0.0001" inputmode="decimal" placeholder="= OT"></div>
+<div><label>OT Linggo / festivo (+65%)</label><input data-r="otDom" type="number" step="0.0001" inputmode="decimal" placeholder="= OT"></div>
+</div>
+<button class="btn g full" type="button" id="rdef" style="margin-top:10px">I-reset sa rate ng busta paga</button>
+<small style="color:#64748b;display:block;margin-top:8px">Default mula sa busta paga (Asteroide / CCNL): Ore ordinarie 10,622 · Str. feriale 30% 13,8086 · Sabato 50% 15,933 · Festivo 65% 17,5263. Sabado at Linggo ay OT lang.</small></details></div>
 </main>
 <script>
 const K='timesyet.v1',$=id=>document.getElementById(id);
-let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{normal:'',ot:'',sab:'',dom:'',otSab:'',otDom:''}};
-let migrated=false;S.e.forEach(e=>{const w=new Date(e.date+'T12:00:00Z').getUTCDay();if((w==0||w==6)&&e.n){e.o+=e.n;e.n=0;migrated=true}});if('sab' in S.r||'dom' in S.r){delete S.r.sab;delete S.r.dom;migrated=true}if(migrated)localStorage.setItem(K,JSON.stringify(S));
+const DEF={normal:10.622,ot:13.8086,otSab:15.933,otDom:17.5263};
+let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{...DEF}};
+if(!S.r)S.r={...DEF};let migrated=false;
+S.e.forEach(e=>{const w=new Date(e.date+'T12:00:00Z').getUTCDay();if((w==0||w==6)&&e.n){e.o+=e.n;e.n=0;migrated=true}});
+if('sab' in S.r||'dom' in S.r){delete S.r.sab;delete S.r.dom;migrated=true}
+['normal','ot','otSab','otDom'].forEach(k=>{if(S.r[k]===''||S.r[k]==null){S.r[k]=DEF[k];migrated=true}});
+if(migrated)localStorage.setItem(K,JSON.stringify(S));
 let F={n:8,o:0},editId=null;const save=()=>localStorage.setItem(K,JSON.stringify(S));
 const todayRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome'}).format(new Date());
 const dmy=d=>d.split('-').reverse().join('/'),DN=['Linggo','Lunes','Martes','Miyerkules','Huwebes','Biyernes','Sabado'];
@@ -93,7 +100,10 @@ $('fd').oninput=$('fd').onchange=form;$('cancel').onclick=reset;
 $('save').onclick=()=>{const d=$('fd').value;if(!okDate(d))return alert('Pumili ng wastong petsa.');
 let n=F.n,o=F.o;if(type(d)!='wk'){o+=n;n=0}const v={date:d,n,o,note:$('fn').value.trim()};if(v.n+v.o<=0)return alert('Pumili ng oras.');
 if(editId){const row=S.e.find(x=>x.id==editId);if(!row)return alert('Hindi mahanap ang tala.');Object.assign(row,v)}else S.e.push({id:Date.now(),...v});save();reset();render()};
-document.querySelectorAll('[data-r]').forEach(i=>{i.value=S.r[i.dataset.r]??'';i.oninput=()=>{S.r[i.dataset.r]=i.value===''?'':num(i.value);save();render()}});
+function syncRateInputs(){document.querySelectorAll('[data-r]').forEach(i=>{i.value=S.r[i.dataset.r]??''})}
+document.querySelectorAll('[data-r]').forEach(i=>{i.oninput=()=>{S.r[i.dataset.r]=i.value===''?'':num(i.value);save();render()}});
+syncRateInputs();
+$('rdef').onclick=()=>{Object.assign(S.r,DEF);syncRateInputs();save();render()};
 $('csv').onclick=()=>{const q=x=>'"'+String(x).replace(/"/g,'""')+'"',c2=x=>String(x).replace('.',',');
 let c='Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Kita (EUR);Tala\n';
 [...S.e].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{const k=calc(e);c+=[dmy(e.date),DN[dow(e.date)],TL[k.t],c2(e.n),c2(k.t=='wk'?e.o:0),c2(k.t=='sab'?e.o:0),c2(k.t=='dom'?e.o:0),c2(e.n+e.o),k.eur.toFixed(2).replace('.',','),q(e.note||'')].join(';')+'\n'});
