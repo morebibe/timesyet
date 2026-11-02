@@ -9,7 +9,7 @@
 <title>TimeSyet</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;color:#0f172a}
-header{background:#0f766e;color:#fff;padding:16px;text-align:center}header h1{margin:0;font-size:26px;letter-spacing:.5px}#today{opacity:.85;font-size:14px}
+header{background:#0f766e;color:#fff;padding:calc(16px + env(safe-area-inset-top,0px)) 16px 16px;text-align:center}header h1{margin:0;font-size:26px;letter-spacing:.5px}#today{opacity:.85;font-size:14px}
 main{max-width:640px;margin:0 auto;padding:12px}.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
 h3{margin:0 0 6px}label{display:block;font-size:13px;color:#475569;margin-top:8px}
 input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-radius:8px}
@@ -50,23 +50,28 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 <script>
 const K='timesyet.v1',$=id=>document.getElementById(id);
 let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{normal:'',ot:'',sab:'',dom:'',otSab:'',otDom:''}};
-S.e.forEach(e=>{const w=new Date(e.date+'T12:00:00Z').getUTCDay();if((w==0||w==6)&&e.n){e.o+=e.n;e.n=0}});delete S.r.sab;delete S.r.dom;localStorage.setItem(K,JSON.stringify(S));
+let migrated=false;S.e.forEach(e=>{const w=new Date(e.date+'T12:00:00Z').getUTCDay();if((w==0||w==6)&&e.n){e.o+=e.n;e.n=0;migrated=true}});if('sab' in S.r||'dom' in S.r){delete S.r.sab;delete S.r.dom;migrated=true}if(migrated)localStorage.setItem(K,JSON.stringify(S));
 let F={n:8,o:0},editId=null;const save=()=>localStorage.setItem(K,JSON.stringify(S));
 const todayRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome'}).format(new Date());
 const dmy=d=>d.split('-').reverse().join('/'),DN=['Linggo','Lunes','Martes','Miyerkules','Huwebes','Biyernes','Sabado'];
+const okDate=d=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return false;const x=new Date(d+'T12:00:00Z');return!isNaN(x)&&x.toISOString().slice(0,10)===d};
 const dow=d=>new Date(d+'T12:00:00Z').getUTCDay(),type=d=>({0:'dom',6:'sab'})[dow(d)]||'wk';
 const TL={wk:'Weekday',sab:'Sabado',dom:'Linggo'},num=v=>parseFloat(v)||0;
 const fh=h=>h==0.5?'30 min':(Math.round(h*100)/100).toString().replace('.',',')+'h',fe=x=>'€'+x.toFixed(2).replace('.',',');
+const ratesSet=()=>S.r.normal!==''||S.r.ot!==''||S.r.otSab!==''||S.r.otDom!=='';
 function rates(t){const r=S.r,ot=num(r.ot);return t=='sab'?[0,r.otSab===''||r.otSab==null?ot:num(r.otSab)]:t=='dom'?[0,r.otDom===''||r.otDom==null?ot:num(r.otDom)]:[num(r.normal),ot]}
 function calc(e){const t=type(e.date),[rn,ro]=rates(t);return{t,eur:e.n*rn+e.o*ro}}
 function weekStart(d){const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()-(x.getUTCDay()+6)%7);return x.toISOString().slice(0,10)}
-function grid(id,arr,k,star){const g=$(id);g.innerHTML='';arr.forEach(v=>{const b=document.createElement('button');b.textContent=v==0.5?'30 min':v;b.dataset.v=v;if(v==star)b.className='star';b.onclick=()=>{F[k]=v;form()};g.appendChild(b)})}
+function grid(id,arr,k,star){const g=$(id);g.innerHTML='';arr.forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v==0.5?'30 min':v;b.dataset.v=v;if(v==star)b.className='star';b.onclick=()=>{F[k]=v;form()};g.appendChild(b)})}
 grid('ng',[1,2,3,4,5,6,7,8,9,10,11,12],'n',8);grid('og',[0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12],'o');
-document.querySelectorAll('.step button').forEach(b=>b.onclick=()=>{const k=b.dataset.t;F[k]=Math.max(0,Math.min(24,F[k]+ +b.dataset.d));form()});
+document.querySelectorAll('.step button').forEach(b=>{b.type='button';b.setAttribute('aria-label',b.dataset.d>0?'Dagdagan':'Bawasan');b.onclick=()=>{const k=b.dataset.t;F[k]=Math.max(0,Math.min(24,+(Math.round((F[k]+ +b.dataset.d)*100)/100)));form()}});
 function form(){$('nv').textContent=fh(F.n);$('ov').textContent=fh(F.o);
 [['ng','n'],['og','o']].forEach(([g,k])=>$(g).querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v==F[k])));
-const d=$('fd').value||todayRome(),t=type(d),we=t!='wk';if(we)F.n=0;else if(F._we&&!F.n)F.n=8;F._we=we;$('nsec').style.display=we?'none':'';$('olab').textContent=we?'OT '+TL[t]+' (OT lang tuwing weekend)':'Overtime (OT)';$('dtype').textContent=t=='wk'?DN[dow(d)]+' · Weekday':DN[dow(d)];$('dtype').className='badge '+t;
-$('prev').innerHTML=`Kabuuan: <b>${fh(F.n+F.o)}</b> ${we?'(OT '+TL[t]+')':`(${fh(F.n)} normal + ${fh(F.o)} OT)`} · <b>${fe(calc({date:d,n:F.n,o:F.o}).eur)}</b>`}
+const raw=$('fd').value,d=okDate(raw)?raw:todayRome(),valid=okDate(raw)||!raw,t=type(d),we=t!='wk';
+if(we)F.n=0;else if(F._we&&!F.n)F.n=8;F._we=we;$('nsec').style.display=we?'none':'';$('olab').textContent=we?'OT '+TL[t]+' (OT lang tuwing weekend)':'Overtime (OT)';
+$('dtype').textContent=!valid?'Petsa':(t=='wk'?DN[dow(d)]+' · Weekday':DN[dow(d)]);$('dtype').className='badge '+(!valid?'':t);
+const rateHint=ratesSet()?'':` · <span style="color:#b45309">Itakda ang rates sa Settings</span>`;
+$('prev').innerHTML=!valid?'Pumili ng wastong petsa.':`Kabuuan: <b>${fh(F.n+F.o)}</b> ${we?'(OT '+TL[t]+')':`(${fh(F.n)} normal + ${fh(F.o)} OT)`} · <b>${fe(calc({date:d,n:F.n,o:F.o}).eur)}</b>${rateHint}`}
 function sum(list){const s={n:0,wk:0,sab:0,dom:0,eur:0};list.forEach(e=>{const c=calc(e);s.eur+=c.eur;s.n+=e.n;s[c.t]+=e.o});return s}
 const sl=s=>`Normal ${fh(s.n)}<br>OT Lun–Biy ${fh(s.wk)}<br>OT Sabado ${fh(s.sab)}<br>OT Linggo ${fh(s.dom)}<br><b>Kabuuan ${fh(s.n+s.wk+s.sab+s.dom)}</b>`;
 function render(){const td=todayRome();$('today').textContent=DN[dow(td)]+', '+dmy(td);
@@ -74,17 +79,24 @@ const w=sum(S.e.filter(e=>weekStart(e.date)==weekStart(td))),m=sum(S.e.filter(e=
 $('we').textContent=fe(w.eur);$('wl').innerHTML=sl(w);$('me').textContent=fe(m.eur);$('ml').innerHTML=sl(m);
 const L=$('list');L.innerHTML='';const s=[...S.e].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);if(!s.length)L.innerHTML='<p style="color:#64748b">Wala pang tala.</p>';
 let last='';s.forEach(e=>{const c=calc(e);if(e.date!=last){last=e.date;L.insertAdjacentHTML('beforeend',`<div class="day">${DN[dow(e.date)]}, ${dmy(e.date)} <span class="badge ${c.t}">${TL[c.t]}</span></div>`)}
-const r=document.createElement('div');r.className='ent';r.innerHTML=`<div><b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small> · <b style="color:#0f766e">${fe(c.eur)}</b>${e.note?'<br><small>'+e.note.replace(/[<&]/g,x=>x=='<'?'&lt;':'&amp;')+'</small>':''}</div><div><button title="I-edit">✏️</button><button title="Burahin">🗑️</button></div>`;
-const[b1,b2]=r.querySelectorAll('button');b1.onclick=()=>edit(e);b2.onclick=()=>{if(confirm('Burahin ito?')){S.e=S.e.filter(x=>x.id!=e.id);save();render()}};L.appendChild(r)});form()}
+const r=document.createElement('div');r.className='ent';const note=document.createElement('div');const meta=document.createElement('div');
+meta.innerHTML=`<b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small> · <b style="color:#0f766e">${fe(c.eur)}</b>`;
+note.appendChild(meta);if(e.note){const sm=document.createElement('small');sm.textContent=e.note;note.appendChild(document.createElement('br'));note.appendChild(sm)}
+const acts=document.createElement('div');const b1=document.createElement('button'),b2=document.createElement('button');
+b1.type='button';b2.type='button';b1.title='I-edit';b1.setAttribute('aria-label','I-edit');b1.textContent='✏️';
+b2.title='Burahin';b2.setAttribute('aria-label','Burahin');b2.textContent='🗑️';
+b1.onclick=()=>edit(e);b2.onclick=()=>{if(confirm('Burahin ito?')){S.e=S.e.filter(x=>x.id!=e.id);save();render()}};
+acts.append(b1,b2);r.append(note,acts);L.appendChild(r)});form()}
 function edit(e){editId=e.id;$('fd').value=e.date;F={n:e.n,o:e.o,_we:type(e.date)!='wk'};$('fn').value=e.note||'';$('ftitle').textContent='I-edit ang oras';$('cancel').style.display='';form();scrollTo(0,0)}
 function reset(){editId=null;$('fd').value=todayRome();F={n:type(todayRome())=='wk'?8:0,o:0};$('fn').value='';$('ftitle').textContent='Magdagdag ng oras';$('cancel').style.display='none';form()}
-$('fd').onchange=form;$('cancel').onclick=reset;
-$('save').onclick=()=>{const v={date:$('fd').value,n:F.n,o:F.o,note:$('fn').value.trim()};if(!v.date)return alert('Pumili ng petsa.');if(v.n+v.o<=0)return alert('Pumili ng oras.');
-if(editId)Object.assign(S.e.find(x=>x.id==editId),v);else S.e.push({id:Date.now(),...v});save();reset();render()};
+$('fd').oninput=$('fd').onchange=form;$('cancel').onclick=reset;
+$('save').onclick=()=>{const d=$('fd').value;if(!okDate(d))return alert('Pumili ng wastong petsa.');
+let n=F.n,o=F.o;if(type(d)!='wk'){o+=n;n=0}const v={date:d,n,o,note:$('fn').value.trim()};if(v.n+v.o<=0)return alert('Pumili ng oras.');
+if(editId){const row=S.e.find(x=>x.id==editId);if(!row)return alert('Hindi mahanap ang tala.');Object.assign(row,v)}else S.e.push({id:Date.now(),...v});save();reset();render()};
 document.querySelectorAll('[data-r]').forEach(i=>{i.value=S.r[i.dataset.r]??'';i.oninput=()=>{S.r[i.dataset.r]=i.value===''?'':num(i.value);save();render()}});
 $('csv').onclick=()=>{const q=x=>'"'+String(x).replace(/"/g,'""')+'"',c2=x=>String(x).replace('.',',');
 let c='Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Kita (EUR);Tala\n';
 [...S.e].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{const k=calc(e);c+=[dmy(e.date),DN[dow(e.date)],TL[k.t],c2(e.n),c2(k.t=='wk'?e.o:0),c2(k.t=='sab'?e.o:0),c2(k.t=='dom'?e.o:0),c2(e.n+e.o),k.eur.toFixed(2).replace('.',','),q(e.note||'')].join(';')+'\n'});
-const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+c],{type:'text/csv'}));a.download='timesyet-'+todayRome()+'.csv';a.click()};
+const url=URL.createObjectURL(new Blob(['\ufeff'+c],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='timesyet-'+todayRome()+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 reset();render();
 </script></body></html>
