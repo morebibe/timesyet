@@ -41,10 +41,10 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 <div class="card"><h3>Kabuuan</h3><div class="tot"><div><small>Linggong ito</small><div class="e" id="we"></div><div class="l" id="wl"></div></div><div><small>Buwang ito</small><div class="e" id="me"></div><div class="l" id="ml"></div></div></div></div>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">Listahan</h3><button class="btn g" id="csv" style="margin:0">⬇ CSV</button></div><div id="list"></div></div>
 <div class="card"><details id="set"><summary>⚙️ Settings: bayad kada oras (€)</summary><div class="rates">
-<div><label>Normal (Lun–Biy)</label><input data-r="normal" type="number" step="0.0001" inputmode="decimal"></div>
-<div><label>OT Lun–Biy (+30%)</label><input data-r="ot" type="number" step="0.0001" inputmode="decimal"></div>
-<div><label>OT Sabado (+50%)</label><input data-r="otSab" type="number" step="0.0001" inputmode="decimal" placeholder="= OT"></div>
-<div><label>OT Linggo / festivo (+65%)</label><input data-r="otDom" type="number" step="0.0001" inputmode="decimal" placeholder="= OT"></div>
+<div><label>Normal (Lun–Biy)</label><input data-r="normal" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hal. 10,622"></div>
+<div><label>OT Lun–Biy (+30%)</label><input data-r="ot" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hal. 13,8086"></div>
+<div><label>OT Sabado (+50%)</label><input data-r="otSab" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hal. 15,933"></div>
+<div><label>OT Linggo / festivo (+65%)</label><input data-r="otDom" type="text" inputmode="decimal" enterkeyhint="done" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hal. 17,5263"></div>
 </div>
 <button class="btn g full" type="button" id="rdef" style="margin-top:10px">I-reset sa rate ng busta paga</button>
 <small style="color:#64748b;display:block;margin-top:8px">Default mula sa busta paga (Asteroide / CCNL): Ore ordinarie 10,622 · Str. feriale 30% 13,8086 · Sabato 50% 15,933 · Festivo 65% 17,5263. Sabado at Linggo ay OT lang.</small></details></div>
@@ -63,7 +63,9 @@ const todayRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome'}).fo
 const dmy=d=>d.split('-').reverse().join('/'),DN=['Linggo','Lunes','Martes','Miyerkules','Huwebes','Biyernes','Sabado'];
 const okDate=d=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return false;const x=new Date(d+'T12:00:00Z');return!isNaN(x)&&x.toISOString().slice(0,10)===d};
 const dow=d=>new Date(d+'T12:00:00Z').getUTCDay(),type=d=>({0:'dom',6:'sab'})[dow(d)]||'wk';
-const TL={wk:'Weekday',sab:'Sabado',dom:'Linggo'},num=v=>parseFloat(v)||0;
+const TL={wk:'Weekday',sab:'Sabado',dom:'Linggo'},num=v=>parseFloat(String(v??'').replace(/\s/g,'').replace(',','.'))||0;
+const parseRate=v=>{const s=String(v??'').trim().replace(/\s/g,'').replace(',','.');if(s===''||s==='.'||s===',')return '';const n=parseFloat(s);return isNaN(n)?'':n};
+const fmtRate=v=>v===''||v==null?'':String(v).replace('.',',');
 const fh=h=>h==0.5?'30 min':(Math.round(h*100)/100).toString().replace('.',',')+'h',fe=x=>'€'+x.toFixed(2).replace('.',',');
 const ratesSet=()=>S.r.normal!==''||S.r.ot!==''||S.r.otSab!==''||S.r.otDom!=='';
 function rates(t){const r=S.r,ot=num(r.ot);return t=='sab'?[0,r.otSab===''||r.otSab==null?ot:num(r.otSab)]:t=='dom'?[0,r.otDom===''||r.otDom==null?ot:num(r.otDom)]:[num(r.normal),ot]}
@@ -100,8 +102,12 @@ $('fd').oninput=$('fd').onchange=form;$('cancel').onclick=reset;
 $('save').onclick=()=>{const d=$('fd').value;if(!okDate(d))return alert('Pumili ng wastong petsa.');
 let n=F.n,o=F.o;if(type(d)!='wk'){o+=n;n=0}const v={date:d,n,o,note:$('fn').value.trim()};if(v.n+v.o<=0)return alert('Pumili ng oras.');
 if(editId){const row=S.e.find(x=>x.id==editId);if(!row)return alert('Hindi mahanap ang tala.');Object.assign(row,v)}else S.e.push({id:Date.now(),...v});save();reset();render()};
-function syncRateInputs(){document.querySelectorAll('[data-r]').forEach(i=>{i.value=S.r[i.dataset.r]??''})}
-document.querySelectorAll('[data-r]').forEach(i=>{i.oninput=()=>{S.r[i.dataset.r]=i.value===''?'':num(i.value);save();render()}});
+function syncRateInputs(){document.querySelectorAll('[data-r]').forEach(i=>{if(document.activeElement!==i)i.value=fmtRate(S.r[i.dataset.r])})}
+document.querySelectorAll('[data-r]').forEach(i=>{
+i.oninput=()=>{let v=i.value.replace(/[^\d.,]/g,'');const sep=v.search(/[.,]/);if(sep>=0)v=v.slice(0,sep+1)+v.slice(sep+1).replace(/[.,]/g,'');if(v!==i.value)i.value=v;
+S.r[i.dataset.r]=parseRate(v);save();render()};
+i.onblur=()=>{i.value=fmtRate(S.r[i.dataset.r])};
+});
 syncRateInputs();
 $('rdef').onclick=()=>{Object.assign(S.r,DEF);syncRateInputs();save();render()};
 $('csv').onclick=()=>{const q=x=>'"'+String(x).replace(/"/g,'""')+'"',c2=x=>String(x).replace('.',',');
