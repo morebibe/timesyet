@@ -24,6 +24,9 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 .day{font-weight:700;color:#0f766e;margin-top:10px;font-size:14px}.ent{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;padding:8px 0}
 .ent small{color:#64748b}.ent button{background:none;border:0;font-size:18px;padding:4px 6px}
 .rates{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}details summary{font-weight:700;cursor:pointer}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:10px 0;border-top:1px solid #e2e8f0}
+.toggle span{font-size:14px;font-weight:600;color:#0f172a}.toggle input{accent-color:#0f766e;width:20px;height:20px;margin:0}
+#nwrap{margin-top:8px}
 </style></head><body>
 <header><h1>TimeSyet</h1><div id="today"></div></header>
 <main>
@@ -46,21 +49,25 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 <div><label>OT Sabado (+50%)</label><input data-r="otSab" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 15,933"></div>
 <div><label>OT Linggo / festivo (+65%)</label><input data-r="otDom" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 17,5263"></div>
 </div>
-<div style="margin-top:10px"><label>Approx. netto (% ng lordo)</label>
-<input id="npct" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 68"></div>
+<label class="toggle"><span>Ipakita ang approx. netto</span><input id="nshow" type="checkbox"></label>
+<div id="nwrap"><label>Approx. netto (% ng lordo)</label>
+<input id="npct" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 68">
+<small style="color:#64748b;display:block;margin-top:6px">Default <b>68%</b> mula sa busta (Ago/Sett ≈ netto÷lordo). Tantya lang — hindi eksaktong busta.</small></div>
 <button class="btn g full" type="button" id="rdef" style="margin-top:10px">I-reset sa rate ng busta paga</button>
-<small style="color:#64748b;display:block;margin-top:8px">Default mula sa busta paga (Asteroide / CCNL): Ore ordinarie 10,622 · Str. feriale 30% 13,8086 · Sabato 50% 15,933 · Festivo 65% 17,5263. Approx. netto default <b>68%</b> (Ago/Sett ≈ netto÷lordo). Tantya lang — hindi eksaktong busta. Sabado at Linggo ay OT lang.</small></details></div>
+<small style="color:#64748b;display:block;margin-top:8px">Default mula sa busta paga (Asteroide / CCNL): Ore ordinarie 10,622 · Str. feriale 30% 13,8086 · Sabato 50% 15,933 · Festivo 65% 17,5263. Sabado at Linggo ay OT lang.</small></details></div>
 </main>
 <script>
 const K='timesyet.v1',$=id=>document.getElementById(id);
 const DEF={normal:10.622,ot:13.8086,otSab:15.933,otDom:17.5263},DEF_NETTO=68;
-let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{...DEF},nettoPct:DEF_NETTO};
+let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{...DEF},nettoPct:DEF_NETTO,showNetto:true};
 if(!S.r)S.r={...DEF};let migrated=false;
 S.e.forEach(e=>{const w=new Date(e.date+'T12:00:00Z').getUTCDay();if((w==0||w==6)&&e.n){e.o+=e.n;e.n=0;migrated=true}});
 if('sab' in S.r||'dom' in S.r){delete S.r.sab;delete S.r.dom;migrated=true}
 ['normal','ot','otSab','otDom'].forEach(k=>{if(S.r[k]===''||S.r[k]==null){S.r[k]=DEF[k];migrated=true}});
 if(S.nettoPct===''||S.nettoPct==null||isNaN(+S.nettoPct)){S.nettoPct=DEF_NETTO;migrated=true}
+if(typeof S.showNetto!=='boolean'){S.showNetto=true;migrated=true}
 if(migrated)localStorage.setItem(K,JSON.stringify(S));
+const showNetto=()=>!!S.showNetto;
 let F={n:8,o:0},editId=null;const save=()=>localStorage.setItem(K,JSON.stringify(S));
 const todayRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome'}).format(new Date());
 const dmy=d=>d.split('-').reverse().join('/'),DN=['Linggo','Lunes','Martes','Miyerkules','Huwebes','Biyernes','Sabado'];
@@ -85,18 +92,19 @@ const raw=$('fd').value,d=okDate(raw)?raw:todayRome(),valid=okDate(raw)||!raw,t=
 if(we)F.n=0;else if(F._we&&!F.n)F.n=8;F._we=we;$('nsec').style.display=we?'none':'';$('olab').textContent=we?'OT '+TL[t]+' (OT lang tuwing weekend)':'Overtime (OT)';
 $('dtype').textContent=!valid?'Petsa':(t=='wk'?DN[dow(d)]+' · Weekday':DN[dow(d)]);$('dtype').className='badge '+(!valid?'':t);
 const rateHint=ratesSet()?'':` · <span style="color:#b45309">Itakda ang rates sa Settings</span>`;
-const pv=calc({date:d,n:F.n,o:F.o});
-$('prev').innerHTML=!valid?'Pumili ng wastong petsa.':`Kabuuan: <b>${fh(F.n+F.o)}</b> ${we?'(OT '+TL[t]+')':`(${fh(F.n)} normal + ${fh(F.o)} OT)`}<br>Lordo <b>${fe(pv.eur)}</b> · ≈Netto <b>${fe(pv.netto)}</b>${rateHint}`}
+const pv=calc({date:d,n:F.n,o:F.o}),sn=showNetto();
+$('prev').innerHTML=!valid?'Pumili ng wastong petsa.':`Kabuuan: <b>${fh(F.n+F.o)}</b> ${we?'(OT '+TL[t]+')':`(${fh(F.n)} normal + ${fh(F.o)} OT)`}<br>${sn?`Lordo <b>${fe(pv.eur)}</b> · ≈Netto <b>${fe(pv.netto)}</b>`:`<b>${fe(pv.eur)}</b>`}${rateHint}`}
 function sum(list){const s={n:0,wk:0,sab:0,dom:0,eur:0,netto:0};list.forEach(e=>{const c=calc(e);s.eur+=c.eur;s.netto+=c.netto;s.n+=e.n;s[c.t]+=e.o});return s}
 const sl=s=>`Normal ${fh(s.n)}<br>OT Lun–Biy ${fh(s.wk)}<br>OT Sabado ${fh(s.sab)}<br>OT Linggo ${fh(s.dom)}<br><b>Kabuuan ${fh(s.n+s.wk+s.sab+s.dom)}</b>`;
 function render(){const td=todayRome();$('today').textContent=DN[dow(td)]+', '+dmy(td);
-const w=sum(S.e.filter(e=>weekStart(e.date)==weekStart(td))),m=sum(S.e.filter(e=>e.date.slice(0,7)==td.slice(0,7)));
-$('we').textContent='Lordo '+fe(w.eur);$('wn').textContent='≈Netto '+fe(w.netto);$('wl').innerHTML=sl(w);
-$('me').textContent='Lordo '+fe(m.eur);$('mn').textContent='≈Netto '+fe(m.netto);$('ml').innerHTML=sl(m);
+const w=sum(S.e.filter(e=>weekStart(e.date)==weekStart(td))),m=sum(S.e.filter(e=>e.date.slice(0,7)==td.slice(0,7))),sn=showNetto();
+$('nshow').checked=sn;$('nwrap').style.display=sn?'':'none';
+$('we').textContent=(sn?'Lordo ':'')+fe(w.eur);$('wn').textContent=sn?'≈Netto '+fe(w.netto):'';$('wn').style.display=sn?'':'none';$('wl').innerHTML=sl(w);
+$('me').textContent=(sn?'Lordo ':'')+fe(m.eur);$('mn').textContent=sn?'≈Netto '+fe(m.netto):'';$('mn').style.display=sn?'':'none';$('ml').innerHTML=sl(m);
 const L=$('list');L.innerHTML='';const s=[...S.e].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);if(!s.length)L.innerHTML='<p style="color:#64748b">Wala pang tala.</p>';
 let last='';s.forEach(e=>{const c=calc(e);if(e.date!=last){last=e.date;L.insertAdjacentHTML('beforeend',`<div class="day">${DN[dow(e.date)]}, ${dmy(e.date)} <span class="badge ${c.t}">${TL[c.t]}</span></div>`)}
 const r=document.createElement('div');r.className='ent';const note=document.createElement('div');const meta=document.createElement('div');
-meta.innerHTML=`<b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small><br><b style="color:#0f766e">${fe(c.eur)}</b> <small>lordo</small> · <b style="color:#115e59">${fe(c.netto)}</b> <small>≈netto</small>`;
+meta.innerHTML=sn?`<b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small><br><b style="color:#0f766e">${fe(c.eur)}</b> <small>lordo</small> · <b style="color:#115e59">${fe(c.netto)}</b> <small>≈netto</small>`:`<b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small> · <b style="color:#0f766e">${fe(c.eur)}</b>`;
 note.appendChild(meta);if(e.note){const sm=document.createElement('small');sm.textContent=e.note;note.appendChild(document.createElement('br'));note.appendChild(sm)}
 const acts=document.createElement('div');const b1=document.createElement('button'),b2=document.createElement('button');
 b1.type='button';b2.type='button';b1.title='I-edit';b1.setAttribute('aria-label','I-edit');b1.textContent='✏️';
@@ -117,13 +125,14 @@ i.onblur=()=>{i.value=fmtRate(S.r[i.dataset.r])};
 });
 function syncNettoInput(){const i=$('npct');if(document.activeElement!==i)i.value=fmtRate(S.nettoPct)}
 syncRateInputs();syncNettoInput();
+$('nshow').onchange=()=>{S.showNetto=$('nshow').checked;save();render()};
 $('npct').oninput=()=>{let v=$('npct').value.replace(/[^\d.,]/g,'');const sep=v.search(/[.,]/);if(sep>=0)v=v.slice(0,sep+1)+v.slice(sep+1).replace(/[.,]/g,'');if(v!==$('npct').value)$('npct').value=v;
 const p=parseRate(v);S.nettoPct=p===''?'':Math.min(100,p);save();render()};
 $('npct').onblur=()=>{if(S.nettoPct===''||S.nettoPct==null)S.nettoPct=DEF_NETTO;syncNettoInput();save();render()};
-$('rdef').onclick=()=>{Object.assign(S.r,DEF);S.nettoPct=DEF_NETTO;syncRateInputs();syncNettoInput();save();render()};
-$('csv').onclick=()=>{const q=x=>'"'+String(x).replace(/"/g,'""')+'"',c2=x=>String(x).replace('.',',');
-let c='Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Lordo (EUR);Approx netto (EUR);Tala\n';
-[...S.e].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{const k=calc(e);c+=[dmy(e.date),DN[dow(e.date)],TL[k.t],c2(e.n),c2(k.t=='wk'?e.o:0),c2(k.t=='sab'?e.o:0),c2(k.t=='dom'?e.o:0),c2(e.n+e.o),k.eur.toFixed(2).replace('.',','),k.netto.toFixed(2).replace('.',','),q(e.note||'')].join(';')+'\n'});
+$('rdef').onclick=()=>{Object.assign(S.r,DEF);S.nettoPct=DEF_NETTO;S.showNetto=true;syncRateInputs();syncNettoInput();save();render()};
+$('csv').onclick=()=>{const q=x=>'"'+String(x).replace(/"/g,'""')+'"',c2=x=>String(x).replace('.',','),sn=showNetto();
+let c=sn?'Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Lordo (EUR);Approx netto (EUR);Tala\n':'Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Kita (EUR);Tala\n';
+[...S.e].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{const k=calc(e);const row=[dmy(e.date),DN[dow(e.date)],TL[k.t],c2(e.n),c2(k.t=='wk'?e.o:0),c2(k.t=='sab'?e.o:0),c2(k.t=='dom'?e.o:0),c2(e.n+e.o),k.eur.toFixed(2).replace('.',',')];if(sn)row.push(k.netto.toFixed(2).replace('.',','));row.push(q(e.note||''));c+=row.join(';')+'\n'});
 const url=URL.createObjectURL(new Blob(['\ufeff'+c],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='timesyet-'+todayRome()+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 reset();render();
 </script></body></html>
