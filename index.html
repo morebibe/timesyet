@@ -20,7 +20,7 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 .badge{display:inline-block;padding:3px 8px;border-radius:99px;font-size:12px;font-weight:700;background:#e0f2fe;color:#0369a1}.badge.sab{background:#fef3c7;color:#b45309}.badge.dom{background:#fee2e2;color:#b91c1c}
 .btn{padding:12px 16px;border:0;border-radius:10px;background:#0f766e;color:#fff;font-size:16px;font-weight:700;margin-top:12px}.btn.g{background:#e2e8f0;color:#0f172a;font-weight:500}.full{width:100%}
 .prev{text-align:center;margin-top:10px;font-size:15px;color:#334155}
-.tot{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tot>div{background:#f0fdfa;border-radius:10px;padding:10px}.tot small{color:#475569}.tot .e{font-size:20px;font-weight:800;color:#0f766e}.tot .l{font-size:12.5px;color:#334155;line-height:1.5}
+.tot{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tot>div{background:#f0fdfa;border-radius:10px;padding:10px}.tot small{color:#475569}.tot .e{font-size:20px;font-weight:800;color:#0f766e}.tot .n{font-size:13.5px;font-weight:700;color:#115e59;margin-top:2px}.tot .l{font-size:12.5px;color:#334155;line-height:1.5}
 .day{font-weight:700;color:#0f766e;margin-top:10px;font-size:14px}.ent{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;padding:8px 0}
 .ent small{color:#64748b}.ent button{background:none;border:0;font-size:18px;padding:4px 6px}
 .rates{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}details summary{font-weight:700;cursor:pointer}
@@ -38,7 +38,7 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 <div class="prev" id="prev"></div>
 <button class="btn full" id="save">I-save</button><button class="btn g full" id="cancel" style="display:none">Kanselahin</button>
 </div>
-<div class="card"><h3>Kabuuan</h3><div class="tot"><div><small>Linggong ito</small><div class="e" id="we"></div><div class="l" id="wl"></div></div><div><small>Buwang ito</small><div class="e" id="me"></div><div class="l" id="ml"></div></div></div></div>
+<div class="card"><h3>Kabuuan</h3><div class="tot"><div><small>Linggong ito</small><div class="e" id="we"></div><div class="n" id="wn"></div><div class="l" id="wl"></div></div><div><small>Buwang ito</small><div class="e" id="me"></div><div class="n" id="mn"></div><div class="l" id="ml"></div></div></div></div>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">Listahan</h3><button class="btn g" id="csv" style="margin:0">⬇ CSV</button></div><div id="list"></div></div>
 <div class="card"><details id="set"><summary>⚙️ Settings: bayad kada oras (€)</summary><div class="rates">
 <div><label>Normal (Lun–Biy)</label><input data-r="normal" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 10,622"></div>
@@ -46,17 +46,20 @@ input{width:100%;padding:10px;font-size:16px;border:1px solid #cbd5e1;border-rad
 <div><label>OT Sabado (+50%)</label><input data-r="otSab" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 15,933"></div>
 <div><label>OT Linggo / festivo (+65%)</label><input data-r="otDom" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 17,5263"></div>
 </div>
+<div style="margin-top:10px"><label>Approx. netto (% ng lordo)</label>
+<input id="npct" type="text" inputmode="text" enterkeyhint="done" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="hal. 68"></div>
 <button class="btn g full" type="button" id="rdef" style="margin-top:10px">I-reset sa rate ng busta paga</button>
-<small style="color:#64748b;display:block;margin-top:8px">Default mula sa busta paga (Asteroide / CCNL): Ore ordinarie 10,622 · Str. feriale 30% 13,8086 · Sabato 50% 15,933 · Festivo 65% 17,5263. Sabado at Linggo ay OT lang.</small></details></div>
+<small style="color:#64748b;display:block;margin-top:8px">Default mula sa busta paga (Asteroide / CCNL): Ore ordinarie 10,622 · Str. feriale 30% 13,8086 · Sabato 50% 15,933 · Festivo 65% 17,5263. Approx. netto default <b>68%</b> (Ago/Sett ≈ netto÷lordo). Tantya lang — hindi eksaktong busta. Sabado at Linggo ay OT lang.</small></details></div>
 </main>
 <script>
 const K='timesyet.v1',$=id=>document.getElementById(id);
-const DEF={normal:10.622,ot:13.8086,otSab:15.933,otDom:17.5263};
-let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{...DEF}};
+const DEF={normal:10.622,ot:13.8086,otSab:15.933,otDom:17.5263},DEF_NETTO=68;
+let S=JSON.parse(localStorage.getItem(K)||'null')||{e:[],r:{...DEF},nettoPct:DEF_NETTO};
 if(!S.r)S.r={...DEF};let migrated=false;
 S.e.forEach(e=>{const w=new Date(e.date+'T12:00:00Z').getUTCDay();if((w==0||w==6)&&e.n){e.o+=e.n;e.n=0;migrated=true}});
 if('sab' in S.r||'dom' in S.r){delete S.r.sab;delete S.r.dom;migrated=true}
 ['normal','ot','otSab','otDom'].forEach(k=>{if(S.r[k]===''||S.r[k]==null){S.r[k]=DEF[k];migrated=true}});
+if(S.nettoPct===''||S.nettoPct==null||isNaN(+S.nettoPct)){S.nettoPct=DEF_NETTO;migrated=true}
 if(migrated)localStorage.setItem(K,JSON.stringify(S));
 let F={n:8,o:0},editId=null;const save=()=>localStorage.setItem(K,JSON.stringify(S));
 const todayRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome'}).format(new Date());
@@ -68,8 +71,10 @@ const parseRate=v=>{const s=String(v??'').trim().replace(/\s/g,'').replace(',','
 const fmtRate=v=>v===''||v==null?'':String(v).replace('.',',');
 const fh=h=>h==0.5?'30 min':(Math.round(h*100)/100).toString().replace('.',',')+'h',fe=x=>'€'+x.toFixed(2).replace('.',',');
 const ratesSet=()=>S.r.normal!==''||S.r.ot!==''||S.r.otSab!==''||S.r.otDom!=='';
+const nettoPct=()=>{const p=num(S.nettoPct);return p>0?Math.min(100,p):DEF_NETTO};
+const nettoOf=eur=>eur*nettoPct()/100;
 function rates(t){const r=S.r,ot=num(r.ot);return t=='sab'?[0,r.otSab===''||r.otSab==null?ot:num(r.otSab)]:t=='dom'?[0,r.otDom===''||r.otDom==null?ot:num(r.otDom)]:[num(r.normal),ot]}
-function calc(e){const t=type(e.date),[rn,ro]=rates(t);return{t,eur:e.n*rn+e.o*ro}}
+function calc(e){const t=type(e.date),[rn,ro]=rates(t),eur=e.n*rn+e.o*ro;return{t,eur,netto:nettoOf(eur)}}
 function weekStart(d){const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()-(x.getUTCDay()+6)%7);return x.toISOString().slice(0,10)}
 function grid(id,arr,k,star){const g=$(id);g.innerHTML='';arr.forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v==0.5?'30 min':v;b.dataset.v=v;if(v==star)b.className='star';b.onclick=()=>{F[k]=v;form()};g.appendChild(b)})}
 grid('ng',[1,2,3,4,5,6,7,8,9,10,11,12],'n',8);grid('og',[0,0.5,1,1.5,2,2.5,3,4,5,6,8,10,12],'o');
@@ -80,16 +85,18 @@ const raw=$('fd').value,d=okDate(raw)?raw:todayRome(),valid=okDate(raw)||!raw,t=
 if(we)F.n=0;else if(F._we&&!F.n)F.n=8;F._we=we;$('nsec').style.display=we?'none':'';$('olab').textContent=we?'OT '+TL[t]+' (OT lang tuwing weekend)':'Overtime (OT)';
 $('dtype').textContent=!valid?'Petsa':(t=='wk'?DN[dow(d)]+' · Weekday':DN[dow(d)]);$('dtype').className='badge '+(!valid?'':t);
 const rateHint=ratesSet()?'':` · <span style="color:#b45309">Itakda ang rates sa Settings</span>`;
-$('prev').innerHTML=!valid?'Pumili ng wastong petsa.':`Kabuuan: <b>${fh(F.n+F.o)}</b> ${we?'(OT '+TL[t]+')':`(${fh(F.n)} normal + ${fh(F.o)} OT)`} · <b>${fe(calc({date:d,n:F.n,o:F.o}).eur)}</b>${rateHint}`}
-function sum(list){const s={n:0,wk:0,sab:0,dom:0,eur:0};list.forEach(e=>{const c=calc(e);s.eur+=c.eur;s.n+=e.n;s[c.t]+=e.o});return s}
+const pv=calc({date:d,n:F.n,o:F.o});
+$('prev').innerHTML=!valid?'Pumili ng wastong petsa.':`Kabuuan: <b>${fh(F.n+F.o)}</b> ${we?'(OT '+TL[t]+')':`(${fh(F.n)} normal + ${fh(F.o)} OT)`}<br>Lordo <b>${fe(pv.eur)}</b> · ≈Netto <b>${fe(pv.netto)}</b>${rateHint}`}
+function sum(list){const s={n:0,wk:0,sab:0,dom:0,eur:0,netto:0};list.forEach(e=>{const c=calc(e);s.eur+=c.eur;s.netto+=c.netto;s.n+=e.n;s[c.t]+=e.o});return s}
 const sl=s=>`Normal ${fh(s.n)}<br>OT Lun–Biy ${fh(s.wk)}<br>OT Sabado ${fh(s.sab)}<br>OT Linggo ${fh(s.dom)}<br><b>Kabuuan ${fh(s.n+s.wk+s.sab+s.dom)}</b>`;
 function render(){const td=todayRome();$('today').textContent=DN[dow(td)]+', '+dmy(td);
 const w=sum(S.e.filter(e=>weekStart(e.date)==weekStart(td))),m=sum(S.e.filter(e=>e.date.slice(0,7)==td.slice(0,7)));
-$('we').textContent=fe(w.eur);$('wl').innerHTML=sl(w);$('me').textContent=fe(m.eur);$('ml').innerHTML=sl(m);
+$('we').textContent='Lordo '+fe(w.eur);$('wn').textContent='≈Netto '+fe(w.netto);$('wl').innerHTML=sl(w);
+$('me').textContent='Lordo '+fe(m.eur);$('mn').textContent='≈Netto '+fe(m.netto);$('ml').innerHTML=sl(m);
 const L=$('list');L.innerHTML='';const s=[...S.e].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);if(!s.length)L.innerHTML='<p style="color:#64748b">Wala pang tala.</p>';
 let last='';s.forEach(e=>{const c=calc(e);if(e.date!=last){last=e.date;L.insertAdjacentHTML('beforeend',`<div class="day">${DN[dow(e.date)]}, ${dmy(e.date)} <span class="badge ${c.t}">${TL[c.t]}</span></div>`)}
 const r=document.createElement('div');r.className='ent';const note=document.createElement('div');const meta=document.createElement('div');
-meta.innerHTML=`<b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small> · <b style="color:#0f766e">${fe(c.eur)}</b>`;
+meta.innerHTML=`<b>${fh(e.n+e.o)}</b> <small>${c.t=='wk'?`(${fh(e.n)} normal + ${fh(e.o)} OT)`:'(OT '+TL[c.t]+')'}</small><br><b style="color:#0f766e">${fe(c.eur)}</b> <small>lordo</small> · <b style="color:#115e59">${fe(c.netto)}</b> <small>≈netto</small>`;
 note.appendChild(meta);if(e.note){const sm=document.createElement('small');sm.textContent=e.note;note.appendChild(document.createElement('br'));note.appendChild(sm)}
 const acts=document.createElement('div');const b1=document.createElement('button'),b2=document.createElement('button');
 b1.type='button';b2.type='button';b1.title='I-edit';b1.setAttribute('aria-label','I-edit');b1.textContent='✏️';
@@ -108,11 +115,15 @@ i.oninput=()=>{let v=i.value.replace(/[^\d.,]/g,'');const sep=v.search(/[.,]/);i
 S.r[i.dataset.r]=parseRate(v);save();render()};
 i.onblur=()=>{i.value=fmtRate(S.r[i.dataset.r])};
 });
-syncRateInputs();
-$('rdef').onclick=()=>{Object.assign(S.r,DEF);syncRateInputs();save();render()};
+function syncNettoInput(){const i=$('npct');if(document.activeElement!==i)i.value=fmtRate(S.nettoPct)}
+syncRateInputs();syncNettoInput();
+$('npct').oninput=()=>{let v=$('npct').value.replace(/[^\d.,]/g,'');const sep=v.search(/[.,]/);if(sep>=0)v=v.slice(0,sep+1)+v.slice(sep+1).replace(/[.,]/g,'');if(v!==$('npct').value)$('npct').value=v;
+const p=parseRate(v);S.nettoPct=p===''?'':Math.min(100,p);save();render()};
+$('npct').onblur=()=>{if(S.nettoPct===''||S.nettoPct==null)S.nettoPct=DEF_NETTO;syncNettoInput();save();render()};
+$('rdef').onclick=()=>{Object.assign(S.r,DEF);S.nettoPct=DEF_NETTO;syncRateInputs();syncNettoInput();save();render()};
 $('csv').onclick=()=>{const q=x=>'"'+String(x).replace(/"/g,'""')+'"',c2=x=>String(x).replace('.',',');
-let c='Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Kita (EUR);Tala\n';
-[...S.e].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{const k=calc(e);c+=[dmy(e.date),DN[dow(e.date)],TL[k.t],c2(e.n),c2(k.t=='wk'?e.o:0),c2(k.t=='sab'?e.o:0),c2(k.t=='dom'?e.o:0),c2(e.n+e.o),k.eur.toFixed(2).replace('.',','),q(e.note||'')].join(';')+'\n'});
+let c='Petsa;Araw;Uri;Normal;OT Lun-Biy;OT Sabado;OT Linggo;Kabuuang oras;Lordo (EUR);Approx netto (EUR);Tala\n';
+[...S.e].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{const k=calc(e);c+=[dmy(e.date),DN[dow(e.date)],TL[k.t],c2(e.n),c2(k.t=='wk'?e.o:0),c2(k.t=='sab'?e.o:0),c2(k.t=='dom'?e.o:0),c2(e.n+e.o),k.eur.toFixed(2).replace('.',','),k.netto.toFixed(2).replace('.',','),q(e.note||'')].join(';')+'\n'});
 const url=URL.createObjectURL(new Blob(['\ufeff'+c],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='timesyet-'+todayRome()+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 reset();render();
 </script></body></html>
